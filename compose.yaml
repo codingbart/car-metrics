@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: autometry
+      POSTGRES_USER: autometry
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autometry_local}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autometry -d autometry"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8501:8501"
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-autometry_local}
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres_data:

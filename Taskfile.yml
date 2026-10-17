@@ -1,0 +1,50 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Uruchom aplikację i PostgreSQL
+    cmds:
+      - task: dev
+
+  check:
+    internal: true
+    preconditions:
+      - sh: command -v docker >/dev/null 2>&1
+        msg: Zainstaluj Docker Desktop.
+      - sh: docker compose version >/dev/null 2>&1
+        msg: Wymagany Docker Compose v2.
+      - sh: docker info >/dev/null 2>&1
+        msg: Uruchom Docker Desktop i poczekaj na gotowość silnika.
+    cmds:
+      - docker compose config --quiet
+
+  dev:
+    desc: Zbuduj i uruchom aplikację oraz PostgreSQL (localhost:8501)
+    cmds:
+      - task: check
+      - docker compose up --build
+
+  stop:
+    desc: Zatrzymaj kontenery, zachowując dane PostgreSQL
+    cmds:
+      - task: check
+      - docker compose down
+
+  logs:
+    desc: Obserwuj logi aplikacji i bazy
+    cmds:
+      - task: check
+      - docker compose logs --follow --tail=100
+
+  test:
+    desc: Uruchom testy obliczeń w kontenerze
+    cmds:
+      - task: check
+      - docker compose build app
+      - docker compose run --rm --no-deps app python -m unittest discover -s tests -v
+
+  status:
+    desc: Pokaż stan kontenerów
+    cmds:
+      - task: check
+      - docker compose ps
