@@ -5,18 +5,22 @@ import math
 
 import plotly.express as px
 import streamlit as st
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from analysis import ATTRS, describe, correlations, rank_cars
-from db import initialize, read_cars, seed_demo, add_car
+from db import engine, initialize
+from repository import CarRepository, RepositoryError, InvalidCarError
+from seed import seed_demo
 
 st.set_page_config(page_title="Car Metrics", page_icon="🚘", layout="wide")
 st.caption("CAR METRICS / LABORATORIUM DANYCH")
 st.title("Poznaj samochody przez liczby.")
 st.write("Porównuj parametry, odkrywaj zależności i znajdź model pasujący do Twoich priorytetów.")
 try:
-    initialize()
-    data = read_cars()
-except SQLAlchemyError:
+    db_engine = engine()
+    initialize(db_engine)
+    repository = CarRepository(db_engine)
+    data = repository.list_all()
+except (SQLAlchemyError, RepositoryError):
     st.error("Nie można połączyć się z PostgreSQL. Uruchom bazę i sprawdź konfigurację połączenia.")
     st.code("docker compose up --build")
     st.stop()
@@ -25,9 +29,9 @@ with st.sidebar:
     st.header("Baza samochodów")
     if st.button("Dodaj 30 rekordów demonstracyjnych"):
         try:
-            seed_demo()
+            seed_demo(repository)
             st.rerun()
-        except SQLAlchemyError:
+        except RepositoryError:
             st.error("Nie udało się zapisać danych demonstracyjnych.")
     st.caption("Dane demonstracyjne są fikcyjne. Ponowne dodanie nie tworzy duplikatów.")
     with st.expander("Dodaj rzeczywisty samochód"):
@@ -47,11 +51,11 @@ with st.sidebar:
                 st.error("Uzupełnij markę, model, wersję i poprawny adres HTTP/HTTPS źródła.")
             else:
                 try:
-                    add_car(dict(brand=brand.strip(), model=model.strip(), variant=variant.strip(), year=int(year), **values, source_url=source.strip(), source_date=source_date, is_demo=False))
+                    repository.add(dict(brand=brand.strip(), model=model.strip(), variant=variant.strip(), year=int(year), **values, source_url=source.strip(), source_date=source_date, is_demo=False))
                     st.rerun()
-                except IntegrityError:
+                except InvalidCarError:
                     st.error("Ten model, rocznik i wersja już istnieją albo dane naruszają ograniczenia bazy.")
-                except SQLAlchemyError:
+                except RepositoryError:
                     st.error("Nie udało się zapisać rekordu. Sprawdź połączenie z bazą.")
 
 if data.empty:
