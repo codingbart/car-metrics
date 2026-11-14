@@ -1,0 +1,225 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[polish]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage[colorlinks, linkcolor=black, urlcolor=blue]{hyperref}
+
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+\title{Porównanie parametrów technicznych samochodów\\[4pt]
+\large Kamień milowy I}
+\author{inż. Filip Stępień \and inż. Bartłomiej Karkoszka}
+\date{Politechnika Świętokrzyska\\
+Wydział Elektrotechniki, Automatyki i Informatyki\\
+Przedmiot: Statystyka w informatyce\\[8pt]
+listopad 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Cel i zakres projektu}
+
+Celem projektu jest interaktywna aplikacja do analizy statystycznej i wizualizacji danych
+o samochodach. Pozwala ona porównywać pojazdy pod względem osiągów, kosztów eksploatacji,
+funkcjonalności i ceny. Obejmuje miary rozkładu, korelacje, histogramy, wykresy punktowe,
+wykresy obrazkowe oraz ranking aut według wag ustalanych przez użytkownika.
+
+Na etapie kamienia milowego aplikacja realizuje wszystkie wymagania projektu.
+Sprawozdanie przedstawia jej obecny stan oraz wstępne wyniki dla pełnego zbioru danych.
+
+\section{Rodzaj i źródło danych}
+
+Dane pochodzą ze zbioru \emph{Qatar Cars} (P.~Musgrave, 2025, licencja CC~BY~4.0),
+dostępnego pod adresem \url{https://github.com/profmusgrave/qatarcars}. Zbiór zebrano
+w styczniu 2025~r., głównie z serwisu YallaMotors Qatar. Jeden rekord opisuje wariant
+samochodu określony marką, modelem, wersją i rokiem modelowym.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+Atrybut & Jednostka & Uwagi \\
+\midrule
+Moc & KM & \\
+Spalanie & l/100 km & \\
+Pojemność bagażnika & l & część wartości wątpliwa \\
+Cena & PLN & przeliczona z rialów katarskich \\
+Przyspieszenie 0--100 km/h & s & zamiast prędkości maksymalnej \\
+\bottomrule
+\end{tabular}
+\caption{Analizowane atrybuty}
+\end{table}
+
+Surowy plik zawiera 105 samochodów. Pominięto 10 aut elektrycznych, bo źródło nie podaje
+dla nich zużycia paliwa. Analizowany zbiór liczy 95 samochodów 27 marek (81 benzynowych
+i 14 hybryd), więc wymaganie co najmniej 30 obiektów i 5 atrybutów jest spełnione
+z zapasem. Ceny przeliczono na złote po średnim kursie NBP z 15.01.2025
+(1,1354~PLN/QAR). Przeliczenie liniowe nie zmienia skośności, kurtozy, współczynnika
+zmienności ani korelacji.
+
+Żaden darmowy zbiór nie zawierał wszystkich pięciu atrybutów z tematu projektu naraz.
+Prędkość maksymalną zastąpiono przyspieszeniem 0--100~km/h, które również opisuje osiągi auta.
+
+\section{Technologie}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+Technologia & Zastosowanie \\
+\midrule
+Python 3.12 / Streamlit & logika i interfejs użytkownika \\
+pandas / SciPy & przetwarzanie danych i miary statystyczne \\
+Plotly & interaktywne wykresy \\
+SQLite / SQLAlchemy & przechowywanie danych i dostęp do nich \\
+Docker / Task & uruchamianie aplikacji jednym poleceniem \\
+\bottomrule
+\end{tabular}
+\caption{Wykorzystane technologie}
+\end{table}
+
+Pięć analizowanych atrybutów jest opisanych w jednym miejscu kodu (nazwa, jednostka,
+kierunek ,,mniej znaczy lepiej'', dokładność wyświetlania). Na tej podstawie powstają
+kolumny bazy, statystyki, ranking i wykresy, więc nazwy i jednostki nie są powielane.
+
+\section{Przechowywanie danych}
+
+Dane są przechowywane w relacyjnej bazie SQLite, w jednej tabeli samochodów. Tabela zawiera
+identyfikator, markę, model, wersję, rok, pięć atrybutów liczbowych oraz adres i datę źródła.
+Ograniczenia w bazie pilnują poprawności danych: wszystkie atrybuty muszą być dodatnie
+(bagażnik nieujemny), a ten sam wariant auta może wystąpić tylko raz.
+
+Przy pierwszym uruchomieniu dane są importowane z pliku CSV w jednej transakcji. Ponowne
+uruchomienie nie tworzy duplikatów. Baza plikowa wystarcza przy niewielkim zbiorze, jednym
+użytkowniku i danych tylko do odczytu, a nie wymaga osobnego serwera.
+
+\section{Analiza statystyczna}
+
+Dla każdego atrybutu aplikacja wyznacza miary zestawione w tabeli~\ref{tab:miary}.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lL}
+\toprule
+Grupa miar & Miary \\
+\midrule
+Tendencja centralna & średnia, mediana, dominanta \\
+Zróżnicowanie & minimum, maksimum, rozstęp, kwartyle $Q_1$ i $Q_3$, rozstęp
+międzykwartylowy, wariancja, odchylenie standardowe, współczynnik zmienności \\
+Asymetria & współczynnik skośności \\
+Koncentracja & kurtoza nadmiarowa \\
+\bottomrule
+\end{tabularx}
+\caption{Wyznaczane miary rozkładu}
+\label{tab:miary}
+\end{table}
+
+Wariancja i odchylenie standardowe są liczone dla próby (dzielnik $n-1$). Skośność wymaga
+co najmniej trzech obserwacji, a kurtoza co najmniej czterech. Rozkład każdego atrybutu
+można obejrzeć na histogramie połączonym z wykresem pudełkowym.
+
+\section{Korelacje pomiędzy atrybutami}
+
+Aplikacja wyznacza macierz korelacji $5 \times 5$ metodą Pearsona (zależność liniowa) lub
+Spearmana (zależność monotoniczna, na rangach). Macierz jest pokazana jako tabela i mapa
+cieplna, a aplikacja wskazuje parę atrybutów o najsilniejszej zależności. Korelacja nie
+oznacza związku przyczynowego, a wyniki zależą od wybranych marek i zakresu cen.
+
+\section{Wizualizacja danych}
+
+Zakładka \emph{Statystyki} pokazuje tabelę miar, histogram i wykres pudełkowy.
+W zakładce \emph{Porównania} użytkownik wybiera dwa atrybuty do wykresu punktowego,
+na którym marki są rozróżnione kolorami.
+
+Nietypowym elementem jest ,,garaż obrazkowy''. Użytkownik wybiera do sześciu samochodów
+i jeden atrybut, a wartości są przedstawione jako rzędy ikon samochodu. Jedna ikona
+odpowiada 25~KM, 1~l/100~km, 100~l, 25\,000~PLN lub 1~s. Liczba ikon jest zaokrąglana
+i ograniczona do 200, dlatego obok wyświetlana jest dokładna wartość.
+
+\section{Ranking samochodów}
+
+Użytkownik ustala wagi pięciu atrybutów w skali od 0 do 10. Każdy atrybut jest
+normalizowany do przedziału 0--1, a dla ceny, spalania i czasu przyspieszenia skala jest
+odwracana, bo mniejsza wartość jest lepsza. Wynik końcowy to średnia ważona przeskalowana
+do 0--100 punktów. Ranking jest liczony dla aktualnie wybranych aut.
+
+\section{Interfejs}
+
+Aplikacja działa w przeglądarce i ma pięć zakładek: \emph{Samochody}, \emph{Statystyki},
+\emph{Porównania}, \emph{Korelacje} i \emph{Ranking}. Panel boczny pozwala filtrować auta
+według marki i maksymalnej ceny; filtry wpływają na wszystkie analizy. Gdy po filtrowaniu
+zostaje mniej niż 30 aut, aplikacja wyświetla ostrzeżenie.
+
+\section{Wstępne wyniki}
+
+Tabela~\ref{tab:wyniki} przedstawia wybrane miary rozkładu dla pełnego zbioru
+(95 samochodów).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lRRRRR}
+\toprule
+Miara & Moc [KM] & Spalanie [l/100 km] & Bagażnik [l] & Cena [tys.\ PLN] & Przysp. [s] \\
+\midrule
+Średnia & 297,6 & 8,74 & 426,2 & 874,8 & 7,28 \\
+Mediana & 240,0 & 7,60 & 440,0 & 160,4 & 7,00 \\
+Odch. standardowe & 247,8 & 3,51 & 259,6 & 4\,126,8 & 2,88 \\
+Wsp. zmienności & 83\% & 40\% & 61\% & 472\% & 40\% \\
+Skośność & 3,23 & 1,72 & 0,70 & 8,01 & 0,51 \\
+Kurtoza nadmiarowa & 14,21 & 3,91 & 0,82 & 68,53 & $-0{,}28$ \\
+\bottomrule
+\end{tabularx}
+\caption{Wybrane miary rozkładu}
+\label{tab:wyniki}
+\end{table}
+
+\begin{itemize}
+  \item Cena ma skrajnie prawostronnie skośny rozkład. Średnia jest ponad pięć razy wyższa
+  od mediany, bo podnosi ją kilka supersamochodów (np. Bugatti Centodieci za
+  37,5~mln~PLN). Typową cenę lepiej opisują mediana i rozstęp międzykwartylowy.
+  \item Moc również jest wyraźnie prawostronnie skośna, z tego samego powodu.
+  \item Bagażnik i przyspieszenie mają rozkłady zbliżone do symetrycznych.
+  \item Najsilniejsza zależność występuje między mocą a ceną (Pearson 0,765,
+  Spearman 0,930). Moc i czas przyspieszenia są silnie ujemnie skorelowane
+  (Spearman $-0{,}852$), a moc i spalanie dodatnio (Pearson 0,742).
+  \item Bagażnik praktycznie nie zależy od pozostałych atrybutów
+  (Spearman od $-0{,}04$ do 0,14).
+  \item Współczynnik Spearmana lepiej opisuje ten zbiór niż Pearsona, bo jest odporny
+  na wartości skrajne cen i mocy.
+\end{itemize}
+
+\section{Uruchamianie}
+
+Do uruchomienia potrzebne są
+\href{https://www.docker.com/products/docker-desktop/}{Docker Desktop}
+(z Docker Compose w wersji 2) oraz narzędzie \href{https://taskfile.dev}{Task}.
+
+\begin{enumerate}
+  \item Uruchomić Docker Desktop.
+  \item Przejść do katalogu projektu.
+  \item Wykonać polecenie \texttt{task dev}. Obraz zostanie zbudowany, a aplikacja uruchomiona.
+  \item Otworzyć w przeglądarce adres \url{http://localhost:8501}.
+\end{enumerate}
+
+Przy pierwszym uruchomieniu baza danych jest tworzona automatycznie i wypełniana danymi
+z pliku CSV. Aplikację zatrzymuje polecenie \texttt{task stop}; przy kolejnym starcie baza
+powstaje od nowa z tego samego pliku.
+
+\section{Źródła}
+
+\begin{itemize}
+  \item Repozytorium projektu: \url{https://github.com/codingbart/car-metrics}
+  \item Zbiór Qatar Cars: \url{https://github.com/profmusgrave/qatarcars}
+  \item Dokumentacja: Python, pandas, SciPy, Plotly, Streamlit, SQLAlchemy.
+\end{itemize}
+
+\end{document}
