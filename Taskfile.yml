@@ -2,7 +2,7 @@ version: '3'
 
 tasks:
   default:
-    desc: Uruchom aplikację i PostgreSQL
+    desc: Uruchom aplikację
     cmds:
       - task: dev
 
@@ -19,32 +19,25 @@ tasks:
       - docker compose config --quiet
 
   dev:
-    desc: Zbuduj i uruchom aplikację oraz PostgreSQL (localhost:8501)
+    desc: Zbuduj i uruchom aplikację (localhost:8501); zmiany w src/ przeładowują się same
     cmds:
       - task: check
-      - docker compose up --build
+      - docker compose up --build --remove-orphans
 
   stop:
-    desc: Zatrzymaj kontenery, zachowując dane PostgreSQL
+    desc: Zatrzymaj aplikację; baza SQLite powstanie od nowa przy następnym starcie
     cmds:
       - task: check
       - docker compose down
 
   logs:
-    desc: Obserwuj logi aplikacji i bazy
+    desc: Obserwuj logi aplikacji
     cmds:
       - task: check
       - docker compose logs --follow --tail=100
 
-  test:
-    desc: Uruchom testy obliczeń w kontenerze
-    cmds:
-      - task: check
-      - docker compose build app
-      - docker compose run --rm --no-deps app python -m unittest discover -s tests -v
-
   status:
-    desc: Pokaż stan kontenerów
+    desc: Pokaż stan kontenera
     cmds:
       - task: check
       - docker compose ps
