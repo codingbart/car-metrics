@@ -1,7 +1,7 @@
 # Notatki do dokumentacji i sprawozdania
 
 Zebrane fakty, decyzje i wyniki do przeniesienia do dokumentacji projektu i sprawozdania.
-Liczby policzone na pełnym zbiorze (95 samochodów, bez filtrów) w wersji z commita `c2101c0`.
+Liczby policzone na pełnym zbiorze (95 samochodów, bez filtrów) w wersji aplikacji z 14.11.2026.
 
 ## 1. Dane
 
